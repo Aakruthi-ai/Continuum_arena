@@ -12,7 +12,7 @@ async def run_game():
     pygame.init()
     pygame.mixer.init()
 
-    # Optimized Canvas Scale for Web Browsers to prevent right-side clipping
+    # WEB-FRIENDLY CONFIGURATION: Downscaled to fit standard browser containers perfectly
     WINDOW_W, WINDOW_H = 960, 600
     global WIDTH, HEIGHT, screen
     WIDTH, HEIGHT = WINDOW_W, WINDOW_H
@@ -272,7 +272,7 @@ async def run_game():
             lbl = fonts["small"].render(self.name, True, WHITE)
             surface.blit(lbl, (p.x - lbl.get_width()//2, p.y - (h_scale * 5.5) + bounce))
 
-    # --- Initial States & Core Data Structures ---
+    # --- Setup Core Structures ---
     p1_name = "HERO-X"
     name_active = False
     p1_color = NEON_PURPLE
@@ -317,7 +317,7 @@ async def run_game():
         keys = pygame.key.get_pressed()
         screen.fill(BG_DARK)
 
-        # Check browser tab activation / focus metrics
+        # ENGINE FOCUS CAPTURE CHECK
         has_focus = pygame.key.get_focused()
 
         left_panel_w = 260
@@ -325,12 +325,11 @@ async def run_game():
         center_view_x = left_panel_w + sub_sidebar_w
         header_h = 60
 
-        # Global Upper Header Bar Render
+        # Draw Global Layout Elements
         pygame.draw.rect(screen, PANEL_BG, (0, 0, WIDTH, header_h))
         pygame.draw.line(screen, NEON_PURPLE, (0, header_h), (WIDTH, header_h), 2)
         screen.blit(fonts["title"].render("CONTINUUM-ARENA // ONSLAUGHT SYSTEM", True, WHITE), (15, 20))
 
-        # Explicit Fullscreen Clickable Button
         fs_btn_rect = pygame.Rect(WIDTH - 190, 12, 175, 34)
         fs_btn_color = NEON_GREEN if is_fullscreen else NEON_CYAN
         pygame.draw.rect(screen, (20, 30, 55), fs_btn_rect, border_radius=4)
@@ -344,9 +343,7 @@ async def run_game():
             missions["survive_sudden_death"]["done"] = True
             play_sound(1100, 0.2)
 
-        # =========================================================
-        # 1. LEFT PANEL: PROGRESS TRACKER
-        # =========================================================
+        # --- Progress Tracker Panel ---
         pygame.draw.rect(screen, (10, 10, 28), (0, header_h, left_panel_w, HEIGHT - header_h))
         pygame.draw.line(screen, NEON_CYAN, (left_panel_w, header_h), (left_panel_w, HEIGHT), 2)
 
@@ -381,9 +378,7 @@ async def run_game():
             screen.blit(fonts["small"].render(line, True, WHITE), (15, y_guide))
             y_guide += 18
 
-        # =========================================================
-        # 2. SUB-SIDEBAR PANEL: NAVIGATION ROUTER
-        # =========================================================
+        # --- Sidebar Nav Router Panel ---
         pygame.draw.rect(screen, (16, 16, 36), (left_panel_w, header_h, sub_sidebar_w, HEIGHT - header_h))
         pygame.draw.line(screen, NEON_CYAN, (center_view_x, header_h), (center_view_x, HEIGHT), 1)
 
@@ -408,7 +403,7 @@ async def run_game():
                 pygame.draw.rect(screen, col, r, 1, border_radius=4)
                 screen.blit(fonts["small"].render(txt, True, WHITE), (r.centerx - fonts["small"].size(txt)[0]//2, r.y + 9))
 
-        # --- Game Loop State Handling ---
+        # --- Global Clock Tick Engine Processing ---
         is_match_active = (current_tab == "BATTLE_FIELD" and time_scale > 0 and match_timer > 0 and p1.is_alive and any(e.is_alive for e in enemies))
         if is_match_active and has_focus:
             match_timer -= (1.0 / 60.0) * time_scale
@@ -427,7 +422,7 @@ async def run_game():
                     elif box_unlocked_reward["perk"] == "hp": p1.max_hp += 400; p1.hp += 400
                     elif box_unlocked_reward["perk"] == "dmg": p1.atk_mult = 2.0
 
-        # --- Event Loop Processing ---
+        # --- Event Matrix Loop ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
 
@@ -526,9 +521,7 @@ async def run_game():
                 if current_tab == "MYSTERY BOX" and btn_box_rect.collidepoint(m_pos) and box_state != "ROLLING":
                     box_state = "ROLLING"; roll_timer, roll_speed = 0, 2; play_sound(150, 0.1)
 
-        # =========================================================
-        # 3. RIGHT PANEL: VIEW MANAGEMENT
-        # =========================================================
+        # --- Active Dashboard Window View Core Router ---
         if current_tab == "CREATOR":
             screen.blit(fonts["title"].render("GENETIC LOADOUT LAB", True, GOLD), (center_view_x + 30, int(HEIGHT*0.14)))
             screen.blit(fonts["main"].render("CHASSIS IDENTIFIER:", True, WHITE), (center_view_x + 30, int(HEIGHT*0.23)))
@@ -620,7 +613,7 @@ async def run_game():
             p1.max_hp = 1000 + (stats["DEFENSE"] * 50)
             p1_calc_atk = (15 + (stats["STRENGTH"] * 2)) * p1.atk_mult
 
-            # Only process input adjustments if the window has system focus focus
+            # Only accept controls if window has focus
             is_rewinding = has_focus and (keys[pygame.K_r] or (btn_rev_rect.collidepoint(m_pos) and pygame.mouse.get_pressed()[0]))
 
             if is_rewinding:
@@ -717,7 +710,6 @@ async def run_game():
                         history.append(((p1.ratio.x, p1.ratio.y), p1.hp, p1.is_alive, match_timer, e_sn, [(b.pos.x, b.pos.y, b.angle, b.color, b.owner_name, b.is_plasma) for b in bullets], [(o.pos.x, o.pos.y) for o in orbs], m_sn))
                         if len(history) > 400: history.pop(0)
 
-            # Draw Grid lines
             for j in range(int(HEIGHT*0.25), HEIGHT - 40, int(HEIGHT*0.065)):
                 pygame.draw.line(screen, (0, 32, 45), (center_view_x, j), (WIDTH, j), 1)
 
@@ -732,7 +724,6 @@ async def run_game():
                 pygame.draw.rect(screen, NEON_RED, (center_view_x, 60, WIDTH - center_view_x, HEIGHT - 60), glow_val)
                 screen.blit(fonts["small"].render("CRITICAL ONSLAUGHT: BOTS RE-ENFORCED (1.5X DAMAGE)", True, NEON_RED), (center_view_x + 30, int(header_h * 1.25) + 55))
 
-            # HUD Display Bars
             t_col = NEON_GREEN if match_timer > 20 else NEON_RED
             screen.blit(fonts["title"].render(f"TIMER: {int(match_timer)}s", True, t_col), (center_view_x + 30, int(header_h * 1.25)))
 
@@ -778,21 +769,20 @@ async def run_game():
             surf = fonts["main"].render(txt, True, c)
             screen.blit(surf, (strip.centerx - surf.get_width()//2, strip.centery - surf.get_height()//2))
 
-        # --- Dynamic Web Tab Focus Alert Layer ---
+        # --- DYNAMIC INTERACTIVE WINDOW FOCUS MASK ALERT LAYER ---
         if not has_focus:
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 180))
+            overlay.fill((0, 0, 0, 200)) # Darken background to capture user view
             screen.blit(overlay, (0, 0))
             
-            # Glowing focus notice layout box
-            msg_box = pygame.Rect(WIDTH//2 - 200, HEIGHT//2 - 35, 400, 70)
+            msg_box = pygame.Rect(WIDTH//2 - 220, HEIGHT//2 - 40, 440, 80)
             pygame.draw.rect(screen, PANEL_BG, msg_box, border_radius=6)
             pygame.draw.rect(screen, NEON_CYAN, msg_box, 2, border_radius=6)
             
             txt1 = fonts["title"].render("⚠️ KEYBOARD INPUT LOCKED ⚠️", True, NEON_AMBER)
-            txt2 = fonts["small"].render("Click anywhere inside this grid window to active keys!", True, WHITE)
-            screen.blit(txt1, (msg_box.centerx - txt1.get_width()//2, msg_box.y + 14))
-            screen.blit(txt2, (msg_box.centerx - txt2.get_width()//2, msg_box.y + 42))
+            txt2 = fonts["small"].render("Click anywhere directly inside this game block to move/shoot!", True, WHITE)
+            screen.blit(txt1, (msg_box.centerx - txt1.get_width()//2, msg_box.y + 16))
+            screen.blit(txt2, (msg_box.centerx - txt2.get_width()//2, msg_box.y + 46))
 
         pygame.display.flip()
         clock.tick(60)

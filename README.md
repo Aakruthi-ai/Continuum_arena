@@ -3,7 +3,7 @@
 An interactive, responsive 2D cyberpunk arcade tactical simulation built using **Python**, **Pygame**, and **Asyncio**. The engine features advanced time-manipulation mechanics, full keyboard/mouse responsiveness, dynamic canvas adjustments, and is architected to run seamlessly across local hardware, headless cloud servers (like Google Colab), and standard web browsers via Emscripten compilation.
 
 ## 🚀 Live Demo
-https://github.com/Aakruthi-ai/Continuum_arena.git
+https://aakruthi-ai.github.io/Continuum_arena/
 
 ---
 

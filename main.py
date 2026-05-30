@@ -12,8 +12,8 @@ async def run_game():
     pygame.init()
     pygame.mixer.init()
 
-    # Base Window Dimensions
-    WINDOW_W, WINDOW_H = 1250, 750
+    # Base Window Dimensions - Tweaked to default safely inside browser containers
+    WINDOW_W, WINDOW_H = 1200, 700
     global WIDTH, HEIGHT, screen
     WIDTH, HEIGHT = WINDOW_W, WINDOW_H
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
@@ -55,11 +55,11 @@ async def run_game():
 
     # --- Typography Engine ---
     def get_fonts():
-        scale = max(0.6, min(1.8, WIDTH / 1100.0))
+        scale = max(0.55, min(1.6, WIDTH / 1150.0))
         return {
-            "main": pygame.font.SysFont("OCR A Extended", int(14 * scale)),
-            "small": pygame.font.SysFont("Verdana", int(11 * scale), bold=True),
-            "title": pygame.font.SysFont("OCR A Extended", int(19 * scale), bold=True)
+            "main": pygame.font.SysFont("OCR A Extended", int(13 * scale)),
+            "small": pygame.font.SysFont("Verdana", int(10 * scale), bold=True),
+            "title": pygame.font.SysFont("OCR A Extended", int(17 * scale), bold=True)
         }
     fonts = get_fonts()
 
@@ -114,8 +114,8 @@ async def run_game():
     class ObstacleBlock:
         def __init__(self, start_x):
             self.rect = pygame.Rect(
-                random.randint(start_x + 80, WIDTH - 120),
-                random.randint(220, HEIGHT - 150),
+                random.randint(start_x + 80, int(WIDTH - 120)),
+                random.randint(220, int(HEIGHT - 150)),
                 random.randint(40, 65),
                 random.randint(40, 65)
             )
@@ -131,8 +131,8 @@ async def run_game():
     class TimeOrb:
         def __init__(self, start_x):
             self.pos = pygame.Vector2(
-                random.randint(start_x + 50, WIDTH - 80),
-                random.randint(220, HEIGHT - 100)
+                random.randint(start_x + 50, int(WIDTH - 80)),
+                random.randint(220, int(HEIGHT - 100))
             )
             self.pulse = random.random() * 5
             self.active = True
@@ -318,18 +318,23 @@ async def run_game():
         keys = pygame.key.get_pressed()
         screen.fill(BG_DARK)
 
-        left_panel_w = 340
-        sub_sidebar_w = 180
+        left_panel_w = 310
+        sub_sidebar_w = 170
         center_view_x = left_panel_w + sub_sidebar_w
         header_h = 70
 
         # Global Upper Header Bar Render
         pygame.draw.rect(screen, PANEL_BG, (0, 0, WIDTH, header_h))
         pygame.draw.line(screen, NEON_PURPLE, (0, header_h), (WIDTH, header_h), 2)
-        screen.blit(fonts["title"].render("CONTINUUM-ARENA // SECTOR ONSLAUGHT SYSTEM", True, WHITE), (20, 20))
+        screen.blit(fonts["title"].render("CONTINUUM-ARENA // SECTOR ONSLAUGHT SYSTEM", True, WHITE), (20, 24))
 
-        fs_msg = "[FULLSCREEN ACTIVE - PRESS 'F' TO EXIT]" if is_fullscreen else "[PRESS 'F' FOR FULLSCREEN]"
-        screen.blit(fonts["small"].render(fs_msg, True, NEON_CYAN), (WIDTH - fonts["small"].size(fs_msg)[0] - 25, 27))
+        # Explicit Fullscreen Clickable Button
+        fs_btn_rect = pygame.Rect(WIDTH - 240, 15, 210, 38)
+        fs_btn_color = NEON_GREEN if is_fullscreen else NEON_CYAN
+        pygame.draw.rect(screen, (20, 30, 55), fs_btn_rect, border_radius=4)
+        pygame.draw.rect(screen, fs_btn_color, fs_btn_rect, 1, border_radius=4)
+        fs_txt = "🖥️ WINDOW MODE [F]" if is_fullscreen else "🖥️ FULLSCREEN MODE [F]"
+        screen.blit(fonts["small"].render(fs_txt, True, fs_btn_color), (fs_btn_rect.x + 15, fs_btn_rect.y + 11))
 
         is_sudden_death = (current_tab == "BATTLE_FIELD" and match_timer <= 20.0 and match_timer > 0)
         if is_sudden_death and not missions["survive_sudden_death"]["done"]:
@@ -347,7 +352,6 @@ async def run_game():
         screen.blit(fonts["main"].render("MISSION LOG MATRIX", True, GOLD), (20, y_guide))
         y_guide += 25
 
-        # Live Dynamic Mission Loop on Sidebar
         for m_key, m_data in missions.items():
             box_r = pygame.Rect(15, y_guide, left_panel_w - 30, 48)
             pygame.draw.rect(screen, (16, 16, 38) if not m_data["done"] else (8, 38, 20), box_r, border_radius=4)
@@ -448,9 +452,21 @@ async def run_game():
                     elif len(p1_name) < 14: p1_name += event.unicode
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                name_input_rect = pygame.Rect(center_view_x + 240, int(HEIGHT*0.22), 220, 35)
+                name_input_rect = pygame.Rect(center_view_x + 220, int(HEIGHT*0.22), 220, 35)
                 btn_enter_arena = pygame.Rect(center_view_x + 40, int(HEIGHT * 0.70), 250, 45)
                 btn_box_rect = pygame.Rect(center_view_x + 100, int(HEIGHT*0.32), 140, 140)
+
+                # Click check for our new prominent header fullscreen toggle button
+                if fs_btn_rect.collidepoint(m_pos):
+                    is_fullscreen = not is_fullscreen
+                    if is_fullscreen:
+                        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                        WIDTH, HEIGHT = screen.get_size()
+                    else:
+                        WIDTH, HEIGHT = WINDOW_W, WINDOW_H
+                        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                    fonts = get_fonts()
+                    play_sound(520, 0.15)
 
                 name_active = name_input_rect.collidepoint(m_pos) if current_tab == "CREATOR" else False
 
@@ -466,11 +482,11 @@ async def run_game():
                         arena_unlocked = True; current_tab = "ARENA LOBBY"; play_sound(680, 0.1)
 
                     for idx, color in enumerate(color_presets):
-                        if pygame.Rect(center_view_x + 240 + (idx*45), int(HEIGHT*0.34), 32, 32).collidepoint(m_pos):
+                        if pygame.Rect(center_view_x + 220 + (idx*45), int(HEIGHT*0.34), 32, 32).collidepoint(m_pos):
                             p1_color = color; play_sound(500, 0.04)
 
-                    plus_rects = {"STRENGTH": pygame.Rect(center_view_x + 300, int(HEIGHT*0.46), 35, 35), "SPEED": pygame.Rect(center_view_x + 300, int(HEIGHT*0.53), 35, 35), "DEFENSE": pygame.Rect(center_view_x + 300, int(HEIGHT*0.60), 35, 35)}
-                    minus_rects = {"STRENGTH": pygame.Rect(center_view_x + 180, int(HEIGHT*0.46), 35, 35), "SPEED": pygame.Rect(center_view_x + 180, int(HEIGHT*0.53), 35, 35), "DEFENSE": pygame.Rect(center_view_x + 180, int(HEIGHT*0.60), 35, 35)}
+                    plus_rects = {"STRENGTH": pygame.Rect(center_view_x + 280, int(HEIGHT*0.46), 35, 35), "SPEED": pygame.Rect(center_view_x + 280, int(HEIGHT*0.53), 35, 35), "DEFENSE": pygame.Rect(center_view_x + 280, int(HEIGHT*0.60), 35, 35)}
+                    minus_rects = {"STRENGTH": pygame.Rect(center_view_x + 160, int(HEIGHT*0.46), 35, 35), "SPEED": pygame.Rect(center_view_x + 160, int(HEIGHT*0.53), 35, 35), "DEFENSE": pygame.Rect(center_view_x + 160, int(HEIGHT*0.60), 35, 35)}
                     for s, r in plus_rects.items():
                         if r.collidepoint(m_pos) and points > 0: stats[s] += 1; points -= 1; play_sound(620, 0.03)
                     for s, r in minus_rects.items():
@@ -515,13 +531,13 @@ async def run_game():
         if current_tab == "CREATOR":
             screen.blit(fonts["title"].render("GENETIC LOADOUT LAB", True, GOLD), (center_view_x + 40, int(HEIGHT*0.14)))
             screen.blit(fonts["main"].render("CHASSIS IDENTIFIER:", True, WHITE), (center_view_x + 40, int(HEIGHT*0.23)))
-            name_input_rect = pygame.Rect(center_view_x + 240, int(HEIGHT*0.22), 220, 35)
+            name_input_rect = pygame.Rect(center_view_x + 220, int(HEIGHT*0.22), 220, 35)
             pygame.draw.rect(screen, (24, 24, 48) if name_active else (14, 14, 28), name_input_rect, border_radius=4)
             screen.blit(fonts["main"].render(p1_name + ("|" if name_active and pygame.time.get_ticks()//400 % 2 == 0 else ""), True, NEON_GREEN), (name_input_rect.x + 10, name_input_rect.y + 6))
 
             screen.blit(fonts["main"].render("CORE ENERGY COLOR:", True, WHITE), (center_view_x + 40, int(HEIGHT*0.34)))
             for idx, color in enumerate(color_presets):
-                c_box = pygame.Rect(center_view_x + 240 + (idx * 45), int(HEIGHT*0.34), 32, 32)
+                c_box = pygame.Rect(center_view_x + 220 + (idx * 45), int(HEIGHT*0.34), 32, 32)
                 pygame.draw.rect(screen, color, c_box, border_radius=16)
                 if p1_color == color: pygame.draw.rect(screen, WHITE, c_box, 2, border_radius=16)
 
@@ -529,11 +545,11 @@ async def run_game():
             for idx, s_name in enumerate(["STRENGTH", "SPEED", "DEFENSE"]):
                 y_p = int(HEIGHT*0.46) + (idx*48)
                 screen.blit(fonts["main"].render(s_name, True, WHITE), (center_view_x + 40, y_p + 4))
-                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 180, y_p, 35, 35), 1, border_radius=4)
-                screen.blit(fonts["main"].render("-", True, NEON_CYAN), (center_view_x + 192, y_p + 4))
-                screen.blit(fonts["main"].render(str(stats[s_name]), True, WHITE), (center_view_x + 245, y_p + 4))
-                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 300, y_p, 35, 35), 1, border_radius=4)
-                screen.blit(fonts["main"].render("+", True, NEON_CYAN), (center_view_x + 310, y_p + 4))
+                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 160, y_p, 35, 35), 1, border_radius=4)
+                screen.blit(fonts["main"].render("-", True, NEON_CYAN), (center_view_x + 172, y_p + 4))
+                screen.blit(fonts["main"].render(str(stats[s_name]), True, WHITE), (center_view_x + 225, y_p + 4))
+                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 280, y_p, 35, 35), 1, border_radius=4)
+                screen.blit(fonts["main"].render("+", True, NEON_CYAN), (center_view_x + 290, y_p + 4))
 
             btn_enter_arena = pygame.Rect(center_view_x + 40, int(HEIGHT * 0.70), 250, 45)
             pygame.draw.rect(screen, NEON_GREEN, btn_enter_arena, border_radius=6)
@@ -558,16 +574,16 @@ async def run_game():
         elif current_tab == "VISUAL TUTORIAL":
             screen.blit(fonts["title"].render("INTELLIGENCE ARCHIVE: HOW TO PLAY", True, GOLD), (center_view_x + 40, int(HEIGHT*0.13)))
 
-            card_w = 250
+            card_w = 230
             card_h = 190
-            gap_x = 30
+            gap_x = 25
             gap_y = 40
 
             x1, y1 = center_view_x + 40, int(HEIGHT*0.22)
             b1 = pygame.Rect(x1, y1, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b1, border_radius=6)
             pygame.draw.rect(screen, NEON_CYAN, b1, 1, border_radius=6)
-            for kx, ky, char in [(x1+110, y1+20, "W"), (x1+65, y1+60, "A"), (x1+110, y1+60, "S"), (x1+155, y1+60, "D")]:
+            for kx, ky, char in [(x1+100, y1+20, "W"), (x1+55, y1+60, "A"), (x1+100, y1+60, "S"), (x1+145, y1+60, "D")]:
                 pygame.draw.rect(screen, GRAY, (kx, ky, 30, 30), border_radius=4)
                 screen.blit(fonts["small"].render(char, True, WHITE), (kx + 10, ky + 8))
             screen.blit(fonts["main"].render("1. LOCOMOTION VECTOR", True, WHITE), (b1.x + 15, b1.y + 110))
@@ -577,8 +593,8 @@ async def run_game():
             b2 = pygame.Rect(x2, y2, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b2, border_radius=6)
             pygame.draw.rect(screen, NEON_PURPLE, b2, 1, border_radius=6)
-            pygame.draw.line(screen, NEON_PURPLE, (b2.x + 40, b2.y + 50), (b2.x + 160, b2.y + 50), 3)
-            pygame.draw.rect(screen, NEON_CYAN, (b2.x + 165, b2.y + 40, 20, 20))
+            pygame.draw.line(screen, NEON_PURPLE, (b2.x + 40, b2.y + 50), (b2.x + 150, b2.y + 50), 3)
+            pygame.draw.rect(screen, NEON_CYAN, (b2.x + 155, b2.y + 40, 20, 20))
             screen.blit(fonts["main"].render("2. LASER INTERCEPT", True, WHITE), (b2.x + 15, b2.y + 110))
             render_wrapped_text(screen, "Press SPACEBAR to unleash active plasma rounds toward incoming robot configurations.", fonts["small"], GRAY, pygame.Rect(b2.x + 15, b2.y + 132, card_w - 30, 50))
 
@@ -586,7 +602,7 @@ async def run_game():
             b3 = pygame.Rect(x3, y3, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b3, border_radius=6)
             pygame.draw.rect(screen, NEON_AMBER, b3, 1, border_radius=6)
-            pygame.draw.arc(screen, NEON_AMBER, (b3.x + 100, b3.y + 30, 50, 50), 0, 4.7, 3)
+            pygame.draw.arc(screen, NEON_AMBER, (b3.x + 90, b3.y + 30, 50, 50), 0, 4.7, 3)
             screen.blit(fonts["main"].render("3. CHRONO REVERSAL", True, WHITE), (b3.x + 15, b3.y + 110))
             render_wrapped_text(screen, "Hold the key [R] down at any crunch frame to rewind health, position, and projectiles.", fonts["small"], GRAY, pygame.Rect(b3.x + 15, b3.y + 132, card_w - 30, 50))
 
@@ -594,8 +610,8 @@ async def run_game():
             b4 = pygame.Rect(x4, y4, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b4, border_radius=6)
             pygame.draw.rect(screen, NEON_GREEN, b4, 1, border_radius=6)
-            pygame.draw.circle(screen, GOLD, (b4.x + 125, b4.y + 50), 10)
-            pygame.draw.circle(screen, NEON_GREEN, (b4.x + 125, b4.y + 50), 16, 2)
+            pygame.draw.circle(screen, GOLD, (b4.x + 115, b4.y + 50), 10)
+            pygame.draw.circle(screen, NEON_GREEN, (b4.x + 115, b4.y + 50), 16, 2)
             screen.blit(fonts["main"].render("4. TIME CORE MATRIX", True, WHITE), (b4.x + 15, b4.y + 110))
             render_wrapped_text(screen, "Intercept spawned golden spheres directly to gain critical +5s timeline adjustments.", fonts["small"], GRAY, pygame.Rect(b4.x + 15, b4.y + 132, card_w - 30, 50))
 
@@ -768,7 +784,6 @@ async def run_game():
     pygame.quit()
 
 if __name__ == "__main__":
-    # Check if we are running in an environment with an existing loop (like Colab/Jupyter)
     try:
         import asyncio
         loop = asyncio.get_running_loop()
@@ -776,9 +791,6 @@ if __name__ == "__main__":
         loop = None
 
     if loop and loop.is_running():
-        # Inside Colab: Schedule the game task directly on the active background loop
-        print("Active event loop detected. Scheduling game task...")
         task = loop.create_task(run_game())
     else:
-        # Standard Environment / Pygbag: Boot up standard runner loop execution
         asyncio.run(run_game())

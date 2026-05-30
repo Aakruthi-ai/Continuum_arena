@@ -1,7 +1,7 @@
 **Continuum Arena**
 
 ---
-A fast-paced, cyberpunk vector-graphics arcade simulation built in Python using Pygame. Choose your chassis identity, allocate core attribute points, and jump into procedural combat maps where you must clear critical mission parameters while avoiding or terminating hostile rogue droids.
+
 ---
 
 🚀 Key Architectural Updates

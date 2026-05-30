@@ -12,8 +12,8 @@ async def run_game():
     pygame.init()
     pygame.mixer.init()
 
-    # Base Window Dimensions - Tweaked to default safely inside browser containers
-    WINDOW_W, WINDOW_H = 1200, 700
+    # Optimized Canvas Scale for Web Browsers to prevent right-side clipping
+    WINDOW_W, WINDOW_H = 960, 600
     global WIDTH, HEIGHT, screen
     WIDTH, HEIGHT = WINDOW_W, WINDOW_H
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
@@ -55,11 +55,11 @@ async def run_game():
 
     # --- Typography Engine ---
     def get_fonts():
-        scale = max(0.55, min(1.6, WIDTH / 1150.0))
+        scale = max(0.55, min(1.6, WIDTH / 960.0))
         return {
-            "main": pygame.font.SysFont("OCR A Extended", int(13 * scale)),
-            "small": pygame.font.SysFont("Verdana", int(10 * scale), bold=True),
-            "title": pygame.font.SysFont("OCR A Extended", int(17 * scale), bold=True)
+            "main": pygame.font.SysFont("OCR A Extended", int(12 * scale)),
+            "small": pygame.font.SysFont("Verdana", int(9 * scale), bold=True),
+            "title": pygame.font.SysFont("OCR A Extended", int(15 * scale), bold=True)
         }
     fonts = get_fonts()
 
@@ -114,16 +114,16 @@ async def run_game():
     class ObstacleBlock:
         def __init__(self, start_x):
             self.rect = pygame.Rect(
-                random.randint(start_x + 80, int(WIDTH - 120)),
-                random.randint(220, int(HEIGHT - 150)),
-                random.randint(40, 65),
-                random.randint(40, 65)
+                random.randint(start_x + 60, int(WIDTH - 100)),
+                random.randint(180, int(HEIGHT - 120)),
+                random.randint(35, 55),
+                random.randint(35, 55)
             )
             self.pulse = random.random() * 10
 
         def draw(self, surface):
             self.pulse += 0.05
-            glow = int(abs(math.sin(self.pulse)) * 30)
+            glow = int(abs(math.sin(self.pulse)) * 25)
             pygame.draw.rect(surface, (BLOCK_COLOR[0]+glow, BLOCK_COLOR[1], BLOCK_COLOR[2]), self.rect, border_radius=4)
             pygame.draw.rect(surface, NEON_CYAN, self.rect, 1, border_radius=4)
 
@@ -131,8 +131,8 @@ async def run_game():
     class TimeOrb:
         def __init__(self, start_x):
             self.pos = pygame.Vector2(
-                random.randint(start_x + 50, int(WIDTH - 80)),
-                random.randint(220, int(HEIGHT - 100))
+                random.randint(start_x + 40, int(WIDTH - 60)),
+                random.randint(180, int(HEIGHT - 90))
             )
             self.pulse = random.random() * 5
             self.active = True
@@ -141,9 +141,9 @@ async def run_game():
 
         def draw(self, surface):
             if not self.active: return
-            radius = int(8 + math.sin(self.pulse) * 3)
+            radius = int(7 + math.sin(self.pulse) * 2)
             pygame.draw.circle(surface, GOLD, (int(self.pos.x), int(self.pos.y)), radius)
-            pygame.draw.circle(surface, NEON_AMBER, (int(self.pos.x), int(self.pos.y)), radius + 4, 2)
+            pygame.draw.circle(surface, NEON_AMBER, (int(self.pos.x), int(self.pos.y)), radius + 3, 2)
 
     # --- Entity Fighter Class ---
     class Fighter:
@@ -169,11 +169,11 @@ async def run_game():
 
         def get_hitbox(self, min_x):
             p = self.get_actual_pos(min_x)
-            return pygame.Rect(p.x - 18, p.y - 60, 36, 70)
+            return pygame.Rect(p.x - 15, p.y - 50, 30, 60)
 
         def handle_input(self, keys, stats_speed, bullets, blocks, min_x, is_p2=False):
             if not self.is_alive: return
-            speed = (3.2 + (stats_speed * 0.4))
+            speed = (3.0 + (stats_speed * 0.35))
             old_ratio = pygame.Vector2(self.ratio)
             self.is_moving = False
 
@@ -199,7 +199,7 @@ async def run_game():
                 trigger = keys[pygame.K_SPACE] if not is_p2 else keys[pygame.K_RCTRL]
                 if trigger:
                     p = self.get_actual_pos(min_x)
-                    bullets.append(Bullet(p.x, p.y - 22, self.facing_angle, self.color, self.name, self.has_plasma))
+                    bullets.append(Bullet(p.x, p.y - 18, self.facing_angle, self.color, self.name, self.has_plasma))
                     self.shoot_cooldown = 10 if self.has_plasma else 16
                     play_sound(680 if self.has_plasma else 550, 0.06)
 
@@ -215,20 +215,20 @@ async def run_game():
             self.anim_tick += 0.1
             self.is_moving = True
 
-            delta = (p_target - pygame.Vector2(0, 22)) - p_self
+            delta = (p_target - pygame.Vector2(0, 18)) - p_self
             self.facing_angle = math.atan2(delta.y, delta.x)
 
             dist = p_self.distance_to(p_target)
             old_ratio = pygame.Vector2(self.ratio)
 
-            ai_speed = 3.4 if sudden_death else 2.3
+            ai_speed = 3.2 if sudden_death else 2.1
 
-            if dist > 150:
+            if dist > 130:
                 new_pos = p_self + delta.normalize() * (ai_speed * t_scale)
                 self.ratio.x = (new_pos.x - min_x) / (WIDTH - min_x)
                 self.ratio.y = new_pos.y / HEIGHT
-            elif dist < 100:
-                new_pos = p_self - delta.normalize() * (1.8 * t_scale)
+            elif dist < 90:
+                new_pos = p_self - delta.normalize() * (1.6 * t_scale)
                 self.ratio.x = (new_pos.x - min_x) / (WIDTH - min_x)
                 self.ratio.y = new_pos.y / HEIGHT
 
@@ -240,15 +240,15 @@ async def run_game():
 
             if self.shoot_cooldown > 0: self.shoot_cooldown -= 1
             else:
-                fire_chance = 0.07 if (sudden_death or dist < 250) else 0.025
+                fire_chance = 0.07 if (sudden_death or dist < 220) else 0.025
                 if random.random() < fire_chance:
-                    bullets.append(Bullet(p_self.x, p_self.y - 22, self.facing_angle, self.color, self.name, sudden_death))
+                    bullets.append(Bullet(p_self.x, p_self.y - 18, self.facing_angle, self.color, self.name, sudden_death))
                     self.shoot_cooldown = random.randint(12, 26) if sudden_death else random.randint(25, 45)
                     play_sound(410 if not sudden_death else 490, 0.07)
 
         def restrict_boundaries(self):
             self.ratio.x = max(0.05, min(0.95, self.ratio.x))
-            self.ratio.y = max(190 / HEIGHT, min((HEIGHT - 80) / HEIGHT, self.ratio.y))
+            self.ratio.y = max(160 / HEIGHT, min((HEIGHT - 60) / HEIGHT, self.ratio.y))
 
         def draw(self, surface, min_x):
             if not self.is_alive: return
@@ -256,18 +256,18 @@ async def run_game():
             c = self.color
             if self.is_moving: self.anim_tick += 0.15
 
-            bounce = math.sin(self.anim_tick) * 3
-            h_scale = 12
+            bounce = math.sin(self.anim_tick) * 2
+            h_scale = 10
 
             pygame.draw.circle(surface, c, (int(p.x), int(p.y - (h_scale * 3.5) + bounce)), h_scale)
             pygame.draw.rect(surface, c, (p.x - h_scale, p.y - (h_scale * 2.7) + bounce, h_scale * 2, h_scale * 2.5), border_radius=4)
 
             w_len = h_scale * 2.4
-            pygame.draw.line(surface, GOLD if not self.has_plasma else NEON_GREEN, (p.x, p.y - h_scale + bounce), (p.x + math.cos(self.facing_angle)*w_len, p.y - h_scale + bounce + math.sin(self.facing_angle)*w_len), 4)
+            pygame.draw.line(surface, GOLD if not self.has_plasma else NEON_GREEN, (p.x, p.y - h_scale + bounce), (p.x + math.cos(self.facing_angle)*w_len, p.y - h_scale + bounce + math.sin(self.facing_angle)*w_len), 3)
 
-            leg = math.cos(self.anim_tick) * 5 if self.is_moving else 0
-            pygame.draw.line(surface, c, (p.x - 4, p.y + bounce), (p.x - h_scale - leg, p.y + (h_scale * 1.8)), 3)
-            pygame.draw.line(surface, c, (p.x + 4, p.y + bounce), (p.x + h_scale + leg, p.y + (h_scale * 1.8)), 3)
+            leg = math.cos(self.anim_tick) * 4 if self.is_moving else 0
+            pygame.draw.line(surface, c, (p.x - 3, p.y + bounce), (p.x - h_scale - leg, p.y + (h_scale * 1.8)), 2)
+            pygame.draw.line(surface, c, (p.x + 3, p.y + bounce), (p.x + h_scale + leg, p.y + (h_scale * 1.8)), 2)
 
             lbl = fonts["small"].render(self.name, True, WHITE)
             surface.blit(lbl, (p.x - lbl.get_width()//2, p.y - (h_scale * 5.5) + bounce))
@@ -288,7 +288,6 @@ async def run_game():
     time_scale = 1.0
     match_timer = 60.0
 
-    # --- MISSION CORE STATS ---
     missions = {
         "orbs_collected": {"current": 0, "target": 3, "desc": "Collect Golden Time Cores", "done": False},
         "laser_hits": {"current": 0, "target": 8, "desc": "Land Tactical Laser Shots", "done": False},
@@ -318,23 +317,26 @@ async def run_game():
         keys = pygame.key.get_pressed()
         screen.fill(BG_DARK)
 
-        left_panel_w = 310
-        sub_sidebar_w = 170
+        # Check browser tab activation / focus metrics
+        has_focus = pygame.key.get_focused()
+
+        left_panel_w = 260
+        sub_sidebar_w = 140
         center_view_x = left_panel_w + sub_sidebar_w
-        header_h = 70
+        header_h = 60
 
         # Global Upper Header Bar Render
         pygame.draw.rect(screen, PANEL_BG, (0, 0, WIDTH, header_h))
         pygame.draw.line(screen, NEON_PURPLE, (0, header_h), (WIDTH, header_h), 2)
-        screen.blit(fonts["title"].render("CONTINUUM-ARENA // SECTOR ONSLAUGHT SYSTEM", True, WHITE), (20, 24))
+        screen.blit(fonts["title"].render("CONTINUUM-ARENA // ONSLAUGHT SYSTEM", True, WHITE), (15, 20))
 
         # Explicit Fullscreen Clickable Button
-        fs_btn_rect = pygame.Rect(WIDTH - 240, 15, 210, 38)
+        fs_btn_rect = pygame.Rect(WIDTH - 190, 12, 175, 34)
         fs_btn_color = NEON_GREEN if is_fullscreen else NEON_CYAN
         pygame.draw.rect(screen, (20, 30, 55), fs_btn_rect, border_radius=4)
         pygame.draw.rect(screen, fs_btn_color, fs_btn_rect, 1, border_radius=4)
-        fs_txt = "🖥️ WINDOW MODE [F]" if is_fullscreen else "🖥️ FULLSCREEN MODE [F]"
-        screen.blit(fonts["small"].render(fs_txt, True, fs_btn_color), (fs_btn_rect.x + 15, fs_btn_rect.y + 11))
+        fs_txt = "🖥️ WINDOW MODE" if is_fullscreen else "🖥️ FULLSCREEN MODE"
+        screen.blit(fonts["small"].render(fs_txt, True, fs_btn_color), (fs_btn_rect.x + 12, fs_btn_rect.y + 9))
 
         is_sudden_death = (current_tab == "BATTLE_FIELD" and match_timer <= 20.0 and match_timer > 0)
         if is_sudden_death and not missions["survive_sudden_death"]["done"]:
@@ -348,36 +350,36 @@ async def run_game():
         pygame.draw.rect(screen, (10, 10, 28), (0, header_h, left_panel_w, HEIGHT - header_h))
         pygame.draw.line(screen, NEON_CYAN, (left_panel_w, header_h), (left_panel_w, HEIGHT), 2)
 
-        y_guide = header_h + 15
-        screen.blit(fonts["main"].render("MISSION LOG MATRIX", True, GOLD), (20, y_guide))
-        y_guide += 25
+        y_guide = header_h + 12
+        screen.blit(fonts["main"].render("MISSION LOG MATRIX", True, GOLD), (15, y_guide))
+        y_guide += 20
 
         for m_key, m_data in missions.items():
-            box_r = pygame.Rect(15, y_guide, left_panel_w - 30, 48)
+            box_r = pygame.Rect(10, y_guide, left_panel_w - 20, 42)
             pygame.draw.rect(screen, (16, 16, 38) if not m_data["done"] else (8, 38, 20), box_r, border_radius=4)
             pygame.draw.rect(screen, NEON_CYAN if not m_data["done"] else NEON_GREEN, box_r, 1, border_radius=4)
 
             txt_m = f"{m_data['desc']}"
             prog_m = f"[{m_data['current']}/{m_data['target']}]" if not m_data["done"] else "[COMPLETE]"
 
-            screen.blit(fonts["small"].render(txt_m, True, WHITE), (25, y_guide + 8))
-            screen.blit(fonts["small"].render(prog_m, True, NEON_AMBER if not m_data["done"] else NEON_GREEN), (25, y_guide + 26))
-            y_guide += 56
+            screen.blit(fonts["small"].render(txt_m, True, WHITE), (18, y_guide + 6))
+            screen.blit(fonts["small"].render(prog_m, True, NEON_AMBER if not m_data["done"] else NEON_GREEN), (18, y_guide + 22))
+            y_guide += 48
 
         y_guide += 5
-        pygame.draw.line(screen, GRAY, (15, y_guide), (left_panel_w - 15, y_guide))
-        y_guide += 15
+        pygame.draw.line(screen, GRAY, (10, y_guide), (left_panel_w - 10, y_guide))
+        y_guide += 10
 
-        screen.blit(fonts["main"].render("MODIFIER ATTRIBUTES:", True, NEON_RED), (20, y_guide))
-        y_guide += 22
+        screen.blit(fonts["main"].render("MODIFIER ATTRIBUTES:", True, NEON_RED), (15, y_guide))
+        y_guide += 18
         advice_text = [
-            "- Boss units accelerate during proximity",
-            "- Under 20s all match variants turn Red",
-            "- Chrono-rewind brings variables back"
+            "- Boss units speed up in proximity",
+            "- Under 20s environment goes Red",
+            "- Chrono-rewind restores variables"
         ]
         for line in advice_text:
-            screen.blit(fonts["small"].render(line, True, WHITE), (20, y_guide))
-            y_guide += 20
+            screen.blit(fonts["small"].render(line, True, WHITE), (15, y_guide))
+            y_guide += 18
 
         # =========================================================
         # 2. SUB-SIDEBAR PANEL: NAVIGATION ROUTER
@@ -390,25 +392,25 @@ async def run_game():
 
         nav_rects = {}
         for idx, tab_name in enumerate(tabs_map):
-            r_tab = pygame.Rect(left_panel_w + 10, header_h + 20 + (idx * 55), sub_sidebar_w - 20, 42)
+            r_tab = pygame.Rect(left_panel_w + 8, header_h + 15 + (idx * 48), sub_sidebar_w - 16, 36)
             nav_rects[tab_name] = r_tab
             is_active_tab = (current_tab == tab_name or (current_tab == "BATTLE_FIELD" and tab_name == "ARENA LOBBY"))
             pygame.draw.rect(screen, (35, 25, 55) if is_active_tab else (22, 22, 45), r_tab, border_radius=4)
-            screen.blit(fonts["small"].render(tab_name, True, WHITE if is_active_tab else GRAY), (r_tab.x + 10, r_tab.y + 14))
+            screen.blit(fonts["small"].render(tab_name, True, WHITE if is_active_tab else GRAY), (r_tab.x + 8, r_tab.y + 11))
 
-        btn_rev_rect = pygame.Rect(left_panel_w + 10, HEIGHT - 165, sub_sidebar_w - 20, 35)
-        btn_frz_rect = pygame.Rect(left_panel_w + 10, HEIGHT - 120, sub_sidebar_w - 20, 35)
-        btn_slw_rect = pygame.Rect(left_panel_w + 10, HEIGHT - 75, sub_sidebar_w - 20, 35)
+        btn_rev_rect = pygame.Rect(left_panel_w + 8, HEIGHT - 140, sub_sidebar_w - 16, 32)
+        btn_frz_rect = pygame.Rect(left_panel_w + 8, HEIGHT - 102, sub_sidebar_w - 16, 32)
+        btn_slw_rect = pygame.Rect(left_panel_w + 8, HEIGHT - 64, sub_sidebar_w - 16, 32)
 
         if current_tab == "BATTLE_FIELD":
             for r, col, txt in [(btn_rev_rect, NEON_PURPLE, "HOLD R / REV"), (btn_frz_rect, NEON_CYAN, "FREEZE" if time_scale > 0 else "RESUME"), (btn_slw_rect, NEON_AMBER, "SLOWMO" if time_scale==1.0 else "NORMAL")]:
                 pygame.draw.rect(screen, (12, 12, 30), r, border_radius=4)
                 pygame.draw.rect(screen, col, r, 1, border_radius=4)
-                screen.blit(fonts["small"].render(txt, True, WHITE), (r.centerx - fonts["small"].size(txt)[0]//2, r.y + 10))
+                screen.blit(fonts["small"].render(txt, True, WHITE), (r.centerx - fonts["small"].size(txt)[0]//2, r.y + 9))
 
         # --- Game Loop State Handling ---
         is_match_active = (current_tab == "BATTLE_FIELD" and time_scale > 0 and match_timer > 0 and p1.is_alive and any(e.is_alive for e in enemies))
-        if is_match_active:
+        if is_match_active and has_focus:
             match_timer -= (1.0 / 60.0) * time_scale
 
         if box_state == "ROLLING":
@@ -452,11 +454,10 @@ async def run_game():
                     elif len(p1_name) < 14: p1_name += event.unicode
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                name_input_rect = pygame.Rect(center_view_x + 220, int(HEIGHT*0.22), 220, 35)
-                btn_enter_arena = pygame.Rect(center_view_x + 40, int(HEIGHT * 0.70), 250, 45)
-                btn_box_rect = pygame.Rect(center_view_x + 100, int(HEIGHT*0.32), 140, 140)
+                name_input_rect = pygame.Rect(center_view_x + 180, int(HEIGHT*0.22), 180, 32)
+                btn_enter_arena = pygame.Rect(center_view_x + 30, int(HEIGHT * 0.70), 220, 40)
+                btn_box_rect = pygame.Rect(center_view_x + 80, int(HEIGHT*0.32), 120, 120)
 
-                # Click check for our new prominent header fullscreen toggle button
                 if fs_btn_rect.collidepoint(m_pos):
                     is_fullscreen = not is_fullscreen
                     if is_fullscreen:
@@ -482,11 +483,11 @@ async def run_game():
                         arena_unlocked = True; current_tab = "ARENA LOBBY"; play_sound(680, 0.1)
 
                     for idx, color in enumerate(color_presets):
-                        if pygame.Rect(center_view_x + 220 + (idx*45), int(HEIGHT*0.34), 32, 32).collidepoint(m_pos):
+                        if pygame.Rect(center_view_x + 180 + (idx*38), int(HEIGHT*0.34), 28, 28).collidepoint(m_pos):
                             p1_color = color; play_sound(500, 0.04)
 
-                    plus_rects = {"STRENGTH": pygame.Rect(center_view_x + 280, int(HEIGHT*0.46), 35, 35), "SPEED": pygame.Rect(center_view_x + 280, int(HEIGHT*0.53), 35, 35), "DEFENSE": pygame.Rect(center_view_x + 280, int(HEIGHT*0.60), 35, 35)}
-                    minus_rects = {"STRENGTH": pygame.Rect(center_view_x + 160, int(HEIGHT*0.46), 35, 35), "SPEED": pygame.Rect(center_view_x + 160, int(HEIGHT*0.53), 35, 35), "DEFENSE": pygame.Rect(center_view_x + 160, int(HEIGHT*0.60), 35, 35)}
+                    plus_rects = {"STRENGTH": pygame.Rect(center_view_x + 240, int(HEIGHT*0.46), 30, 30), "SPEED": pygame.Rect(center_view_x + 240, int(HEIGHT*0.53), 30, 30), "DEFENSE": pygame.Rect(center_view_x + 240, int(HEIGHT*0.60), 30, 30)}
+                    minus_rects = {"STRENGTH": pygame.Rect(center_view_x + 140, int(HEIGHT*0.46), 30, 30), "SPEED": pygame.Rect(center_view_x + 140, int(HEIGHT*0.53), 30, 30), "DEFENSE": pygame.Rect(center_view_x + 140, int(HEIGHT*0.60), 30, 30)}
                     for s, r in plus_rects.items():
                         if r.collidepoint(m_pos) and points > 0: stats[s] += 1; points -= 1; play_sound(620, 0.03)
                     for s, r in minus_rects.items():
@@ -494,7 +495,7 @@ async def run_game():
 
                 elif current_tab == "ARENA LOBBY":
                     for idx in range(4):
-                        if pygame.Rect(center_view_x + 40, int(HEIGHT * 0.24) + (idx * 85), 450, 65).collidepoint(m_pos):
+                        if pygame.Rect(center_view_x + 30, int(HEIGHT * 0.24) + (idx * 75), 400, 58).collidepoint(m_pos):
                             game_mode = ["1_BOT", "LOCAL_2P", "2_BOTS", "3_BOTS"][idx]
                             play_sound(800, 0.08)
 
@@ -505,7 +506,7 @@ async def run_game():
                             for m in missions.values(): m["current"] = 0; m["done"] = False
 
                             enemies.clear(); bullets.clear(); history.clear(); orbs.clear(); blocks.clear()
-                            for _ in range(random.randint(3, 5)): blocks.append(ObstacleBlock(center_view_x))
+                            for _ in range(random.randint(2, 4)): blocks.append(ObstacleBlock(center_view_x))
                             match_timer = 60.0; time_scale = 1.0
 
                             if game_mode == "1_BOT":
@@ -529,97 +530,98 @@ async def run_game():
         # 3. RIGHT PANEL: VIEW MANAGEMENT
         # =========================================================
         if current_tab == "CREATOR":
-            screen.blit(fonts["title"].render("GENETIC LOADOUT LAB", True, GOLD), (center_view_x + 40, int(HEIGHT*0.14)))
-            screen.blit(fonts["main"].render("CHASSIS IDENTIFIER:", True, WHITE), (center_view_x + 40, int(HEIGHT*0.23)))
-            name_input_rect = pygame.Rect(center_view_x + 220, int(HEIGHT*0.22), 220, 35)
+            screen.blit(fonts["title"].render("GENETIC LOADOUT LAB", True, GOLD), (center_view_x + 30, int(HEIGHT*0.14)))
+            screen.blit(fonts["main"].render("CHASSIS IDENTIFIER:", True, WHITE), (center_view_x + 30, int(HEIGHT*0.23)))
+            name_input_rect = pygame.Rect(center_view_x + 180, int(HEIGHT*0.22), 180, 32)
             pygame.draw.rect(screen, (24, 24, 48) if name_active else (14, 14, 28), name_input_rect, border_radius=4)
-            screen.blit(fonts["main"].render(p1_name + ("|" if name_active and pygame.time.get_ticks()//400 % 2 == 0 else ""), True, NEON_GREEN), (name_input_rect.x + 10, name_input_rect.y + 6))
+            screen.blit(fonts["main"].render(p1_name + ("|" if name_active and pygame.time.get_ticks()//400 % 2 == 0 else ""), True, NEON_GREEN), (name_input_rect.x + 8, name_input_rect.y + 6))
 
-            screen.blit(fonts["main"].render("CORE ENERGY COLOR:", True, WHITE), (center_view_x + 40, int(HEIGHT*0.34)))
+            screen.blit(fonts["main"].render("CORE ENERGY COLOR:", True, WHITE), (center_view_x + 30, int(HEIGHT*0.34)))
             for idx, color in enumerate(color_presets):
-                c_box = pygame.Rect(center_view_x + 220 + (idx * 45), int(HEIGHT*0.34), 32, 32)
-                pygame.draw.rect(screen, color, c_box, border_radius=16)
-                if p1_color == color: pygame.draw.rect(screen, WHITE, c_box, 2, border_radius=16)
+                c_box = pygame.Rect(center_view_x + 180 + (idx * 38), int(HEIGHT*0.34), 28, 28)
+                pygame.draw.rect(screen, color, c_box, border_radius=14)
+                if p1_color == color: pygame.draw.rect(screen, WHITE, c_box, 2, border_radius=14)
 
-            screen.blit(fonts["main"].render(f"ALLOCATIONS REMAINING: {points}", True, NEON_GREEN), (center_view_x + 40, int(HEIGHT*0.41)))
+            screen.blit(fonts["main"].render(f"ALLOCATIONS REMAINING: {points}", True, NEON_GREEN), (center_view_x + 30, int(HEIGHT*0.41)))
             for idx, s_name in enumerate(["STRENGTH", "SPEED", "DEFENSE"]):
-                y_p = int(HEIGHT*0.46) + (idx*48)
-                screen.blit(fonts["main"].render(s_name, True, WHITE), (center_view_x + 40, y_p + 4))
-                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 160, y_p, 35, 35), 1, border_radius=4)
-                screen.blit(fonts["main"].render("-", True, NEON_CYAN), (center_view_x + 172, y_p + 4))
-                screen.blit(fonts["main"].render(str(stats[s_name]), True, WHITE), (center_view_x + 225, y_p + 4))
-                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 280, y_p, 35, 35), 1, border_radius=4)
-                screen.blit(fonts["main"].render("+", True, NEON_CYAN), (center_view_x + 290, y_p + 4))
+                y_p = int(HEIGHT*0.46) + (idx*42)
+                screen.blit(fonts["main"].render(s_name, True, WHITE), (center_view_x + 30, y_p + 4))
+                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 140, y_p, 30, 30), 1, border_radius=4)
+                screen.blit(fonts["main"].render("-", True, NEON_CYAN), (center_view_x + 150, y_p + 3))
+                screen.blit(fonts["main"].render(str(stats[s_name]), True, WHITE), (center_view_x + 195, y_p + 4))
+                pygame.draw.rect(screen, NEON_CYAN, (center_view_x + 240, y_p, 30, 30), 1, border_radius=4)
+                screen.blit(fonts["main"].render("+", True, NEON_CYAN), (center_view_x + 248, y_p + 3))
 
-            btn_enter_arena = pygame.Rect(center_view_x + 40, int(HEIGHT * 0.70), 250, 45)
+            btn_enter_arena = pygame.Rect(center_view_x + 30, int(HEIGHT * 0.70), 220, 40)
             pygame.draw.rect(screen, NEON_GREEN, btn_enter_arena, border_radius=6)
             txt_ent = fonts["main"].render("+ ENTER THE ARENA", True, BG_DARK)
-            screen.blit(txt_ent, (btn_enter_arena.centerx - txt_ent.get_width()//2, btn_enter_arena.y + 12))
+            screen.blit(txt_ent, (btn_enter_arena.centerx - txt_ent.get_width()//2, btn_enter_arena.y + 11))
 
         elif current_tab == "ARENA LOBBY":
-            screen.blit(fonts["title"].render("CHOOSE COMBAT SIMULATION CORE", True, NEON_CYAN), (center_view_x + 40, int(HEIGHT*0.14)))
+            screen.blit(fonts["title"].render("CHOOSE COMBAT SIMULATION CORE", True, NEON_CYAN), (center_view_x + 30, int(HEIGHT*0.14)))
             modes = [
                 ("1 BOT CHALLENGE", "Standard target matrix matching versus Kronis-Bot droid."),
                 ("LOCAL 2-PLAYER SPLIT", "P1 controls with [WASD+SPACE] | P2 maps onto [ARROWS+RCTRL]."),
                 ("2 BOTS CROSSFIRE LAYOUT", "Simulate dodging lines against an aggressive double AI setup."),
-                ("3 BOTS EXTREME ONSLAUGHT", "Volatile combat engagement against Alpha, Sigma, and Omni bots simultaneously.")
+                ("3 BOTS EXTREME ONSLAUGHT", "Volatile combat engagement against Alpha, Sigma, and Omni bots.")
             ]
             for idx, (title, desc) in enumerate(modes):
-                m_rect = pygame.Rect(center_view_x + 40, int(HEIGHT * 0.23) + (idx * 80), 480, 65)
+                m_rect = pygame.Rect(center_view_x + 30, int(HEIGHT * 0.23) + (idx * 70), 400, 58)
                 pygame.draw.rect(screen, (15, 15, 38), m_rect, border_radius=6)
                 pygame.draw.rect(screen, NEON_PURPLE if not m_rect.collidepoint(m_pos) else NEON_CYAN, m_rect, 1, border_radius=6)
-                screen.blit(fonts["main"].render(title, True, WHITE), (m_rect.x + 20, m_rect.y + 11))
-                screen.blit(fonts["small"].render(desc, True, GRAY), (m_rect.x + 20, m_rect.y + 36))
+                screen.blit(fonts["main"].render(title, True, WHITE), (m_rect.x + 15, m_rect.y + 9))
+                screen.blit(fonts["small"].render(desc, True, GRAY), (m_rect.x + 15, m_rect.y + 32))
 
         elif current_tab == "VISUAL TUTORIAL":
-            screen.blit(fonts["title"].render("INTELLIGENCE ARCHIVE: HOW TO PLAY", True, GOLD), (center_view_x + 40, int(HEIGHT*0.13)))
+            screen.blit(fonts["title"].render("INTELLIGENCE ARCHIVE: HOW TO PLAY", True, GOLD), (center_view_x + 30, int(HEIGHT*0.13)))
 
-            card_w = 230
-            card_h = 190
-            gap_x = 25
-            gap_y = 40
+            card_w = 200
+            card_h = 170
+            gap_x = 20
+            gap_y = 30
 
-            x1, y1 = center_view_x + 40, int(HEIGHT*0.22)
+            x1, y1 = center_view_x + 30, int(HEIGHT*0.22)
             b1 = pygame.Rect(x1, y1, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b1, border_radius=6)
             pygame.draw.rect(screen, NEON_CYAN, b1, 1, border_radius=6)
-            for kx, ky, char in [(x1+100, y1+20, "W"), (x1+55, y1+60, "A"), (x1+100, y1+60, "S"), (x1+145, y1+60, "D")]:
-                pygame.draw.rect(screen, GRAY, (kx, ky, 30, 30), border_radius=4)
-                screen.blit(fonts["small"].render(char, True, WHITE), (kx + 10, ky + 8))
-            screen.blit(fonts["main"].render("1. LOCOMOTION VECTOR", True, WHITE), (b1.x + 15, b1.y + 110))
-            render_wrapped_text(screen, "Maneuver your unit across space using standard WASD layout parameters safely.", fonts["small"], GRAY, pygame.Rect(b1.x + 15, b1.y + 132, card_w - 30, 50))
+            for kx, ky, char in [(x1+85, y1+15, "W"), (x1+45, y1+50, "A"), (x1+85, y1+50, "S"), (x1+125, y1+50, "D")]:
+                pygame.draw.rect(screen, GRAY, (kx, ky, 26, 26), border_radius=4)
+                screen.blit(fonts["small"].render(char, True, WHITE), (kx + 8, ky + 6))
+            screen.blit(fonts["main"].render("1. LOCOMOTION VECTOR", True, WHITE), (b1.x + 12, b1.y + 95))
+            render_wrapped_text(screen, "Maneuver your unit across space using standard WASD layout parameters.", fonts["small"], GRAY, pygame.Rect(b1.x + 12, b1.y + 115, card_w - 24, 50))
 
             x2, y2 = x1 + card_w + gap_x, y1
             b2 = pygame.Rect(x2, y2, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b2, border_radius=6)
             pygame.draw.rect(screen, NEON_PURPLE, b2, 1, border_radius=6)
-            pygame.draw.line(screen, NEON_PURPLE, (b2.x + 40, b2.y + 50), (b2.x + 150, b2.y + 50), 3)
-            pygame.draw.rect(screen, NEON_CYAN, (b2.x + 155, b2.y + 40, 20, 20))
-            screen.blit(fonts["main"].render("2. LASER INTERCEPT", True, WHITE), (b2.x + 15, b2.y + 110))
-            render_wrapped_text(screen, "Press SPACEBAR to unleash active plasma rounds toward incoming robot configurations.", fonts["small"], GRAY, pygame.Rect(b2.x + 15, b2.y + 132, card_w - 30, 50))
+            pygame.draw.line(screen, NEON_PURPLE, (b2.x + 30, b2.y + 40), (b2.x + 130, b2.y + 40), 3)
+            pygame.draw.rect(screen, NEON_CYAN, (b2.x + 135, b2.y + 32, 16, 16))
+            screen.blit(fonts["main"].render("2. LASER INTERCEPT", True, WHITE), (b2.x + 12, b2.y + 95))
+            render_wrapped_text(screen, "Press SPACEBAR to unleash active plasma rounds toward incoming configurations.", fonts["small"], GRAY, pygame.Rect(b2.x + 12, b2.y + 115, card_w - 24, 50))
 
             x3, y3 = x1, y1 + card_h + gap_y
             b3 = pygame.Rect(x3, y3, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b3, border_radius=6)
             pygame.draw.rect(screen, NEON_AMBER, b3, 1, border_radius=6)
-            pygame.draw.arc(screen, NEON_AMBER, (b3.x + 90, b3.y + 30, 50, 50), 0, 4.7, 3)
-            screen.blit(fonts["main"].render("3. CHRONO REVERSAL", True, WHITE), (b3.x + 15, b3.y + 110))
-            render_wrapped_text(screen, "Hold the key [R] down at any crunch frame to rewind health, position, and projectiles.", fonts["small"], GRAY, pygame.Rect(b3.x + 15, b3.y + 132, card_w - 30, 50))
+            pygame.draw.arc(screen, NEON_AMBER, (b3.x + 80, b3.y + 25, 40, 40), 0, 4.7, 3)
+            screen.blit(fonts["main"].render("3. CHRONO REVERSAL", True, WHITE), (b3.x + 12, b3.y + 95))
+            render_wrapped_text(screen, "Hold key [R] at any crunch frame to rewind health, position, and vectors.", fonts["small"], GRAY, pygame.Rect(b3.x + 12, b3.y + 115, card_w - 24, 50))
 
             x4, y4 = x2, y3
             b4 = pygame.Rect(x4, y4, card_w, card_h)
             pygame.draw.rect(screen, PANEL_BG, b4, border_radius=6)
             pygame.draw.rect(screen, NEON_GREEN, b4, 1, border_radius=6)
-            pygame.draw.circle(screen, GOLD, (b4.x + 115, b4.y + 50), 10)
-            pygame.draw.circle(screen, NEON_GREEN, (b4.x + 115, b4.y + 50), 16, 2)
-            screen.blit(fonts["main"].render("4. TIME CORE MATRIX", True, WHITE), (b4.x + 15, b4.y + 110))
-            render_wrapped_text(screen, "Intercept spawned golden spheres directly to gain critical +5s timeline adjustments.", fonts["small"], GRAY, pygame.Rect(b4.x + 15, b4.y + 132, card_w - 30, 50))
+            pygame.draw.circle(screen, GOLD, (b4.x + 100, b4.y + 40), 8)
+            pygame.draw.circle(screen, NEON_GREEN, (b4.x + 100, b4.y + 40), 14, 2)
+            screen.blit(fonts["main"].render("4. TIME CORE MATRIX", True, WHITE), (b4.x + 12, b4.y + 95))
+            render_wrapped_text(screen, "Intercept spawned golden spheres directly to gain critical timeline extensions.", fonts["small"], GRAY, pygame.Rect(b4.x + 12, b4.y + 115, card_w - 24, 50))
 
         elif current_tab == "BATTLE_FIELD":
             p1.max_hp = 1000 + (stats["DEFENSE"] * 50)
             p1_calc_atk = (15 + (stats["STRENGTH"] * 2)) * p1.atk_mult
 
-            is_rewinding = keys[pygame.K_r] or (btn_rev_rect.collidepoint(m_pos) and pygame.mouse.get_pressed()[0])
+            # Only process input adjustments if the window has system focus focus
+            is_rewinding = has_focus and (keys[pygame.K_r] or (btn_rev_rect.collidepoint(m_pos) and pygame.mouse.get_pressed()[0]))
 
             if is_rewinding:
                 if not rewind_pressed_last_frame and not missions["rewinds_used"]["done"]:
@@ -645,15 +647,16 @@ async def run_game():
                         missions[k]["done"] = m_data["done"]
             else:
                 rewind_pressed_last_frame = False
-                p1.handle_input(keys, stats["SPEED"], bullets, blocks, center_view_x, is_p2=False)
+                if has_focus:
+                    p1.handle_input(keys, stats["SPEED"], bullets, blocks, center_view_x, is_p2=False)
                 p1.restrict_boundaries()
 
                 for e in enemies:
                     if e.is_ai: e.execute_ai_logic([p1], bullets, blocks, center_view_x, time_scale, sudden_death=is_sudden_death)
-                    else: e.handle_input(keys, 5, bullets, blocks, center_view_x, is_p2=True)
+                    elif not e.is_ai and has_focus: e.handle_input(keys, 5, bullets, blocks, center_view_x, is_p2=True)
                     e.restrict_boundaries()
 
-                if time_scale > 0:
+                if time_scale > 0 and has_focus:
                     orb_spawn_timer += 1
                     if orb_spawn_timer > 150: orbs.append(TimeOrb(center_view_x)); orb_spawn_timer = 0
 
@@ -715,7 +718,7 @@ async def run_game():
                         if len(history) > 400: history.pop(0)
 
             # Draw Grid lines
-            for j in range(int(HEIGHT*0.25), HEIGHT - 50, int(HEIGHT*0.065)):
+            for j in range(int(HEIGHT*0.25), HEIGHT - 40, int(HEIGHT*0.065)):
                 pygame.draw.line(screen, (0, 32, 45), (center_view_x, j), (WIDTH, j), 1)
 
             for blk in blocks: blk.draw(screen)
@@ -725,24 +728,24 @@ async def run_game():
             for b in bullets: b.draw(screen)
 
             if is_sudden_death:
-                glow_val = int(abs(math.sin(pygame.time.get_ticks() / 150)) * 4) + 1
-                pygame.draw.rect(screen, NEON_RED, (center_view_x, 70, WIDTH - center_view_x, HEIGHT - 70), glow_val)
-                screen.blit(fonts["small"].render("CRITICAL ONSLAUGHT: BOTS RE-ENFORCED (1.5X DAMAGE)", True, NEON_RED), (center_view_x + 40, int(header_h * 1.25) + 65))
+                glow_val = int(abs(math.sin(pygame.time.get_ticks() / 150)) * 3) + 1
+                pygame.draw.rect(screen, NEON_RED, (center_view_x, 60, WIDTH - center_view_x, HEIGHT - 60), glow_val)
+                screen.blit(fonts["small"].render("CRITICAL ONSLAUGHT: BOTS RE-ENFORCED (1.5X DAMAGE)", True, NEON_RED), (center_view_x + 30, int(header_h * 1.25) + 55))
 
             # HUD Display Bars
             t_col = NEON_GREEN if match_timer > 20 else NEON_RED
-            screen.blit(fonts["title"].render(f"TIMER: {int(match_timer)}s", True, t_col), (center_view_x + 40, int(header_h * 1.25)))
+            screen.blit(fonts["title"].render(f"TIMER: {int(match_timer)}s", True, t_col), (center_view_x + 30, int(header_h * 1.25)))
 
-            y_g = int(header_h * 1.25) + 32
-            pygame.draw.rect(screen, (24, 24, 48), (center_view_x + 40, y_g, 160, 10))
-            pygame.draw.rect(screen, p1_color, (center_view_x + 40, y_g, 160 * (p1.hp/p1.max_hp), 10))
-            screen.blit(fonts["small"].render(f"{p1_name}: {int(p1.hp)}HP", True, WHITE), (center_view_x + 40, y_g + 14))
+            y_g = int(header_h * 1.25) + 26
+            pygame.draw.rect(screen, (24, 24, 48), (center_view_x + 30, y_g, 130, 8))
+            pygame.draw.rect(screen, p1_color, (center_view_x + 30, y_g, 130 * (p1.hp/p1.max_hp), 8))
+            screen.blit(fonts["small"].render(f"{p1_name}: {int(p1.hp)}HP", True, WHITE), (center_view_x + 30, y_g + 12))
 
             for idx, e in enumerate(enemies):
-                x_g = WIDTH - 190 - (idx * 195)
-                pygame.draw.rect(screen, (24, 24, 48), (x_g, y_g, 160, 10))
-                pygame.draw.rect(screen, e.color, (x_g, y_g, 160 * (e.hp/1200), 10))
-                screen.blit(fonts["small"].render(f"{e.name}: {int(e.hp)}HP", True, WHITE), (x_g, y_g + 14))
+                x_g = WIDTH - 150 - (idx * 160)
+                pygame.draw.rect(screen, (24, 24, 48), (x_g, y_g, 130, 8))
+                pygame.draw.rect(screen, e.color, (x_g, y_g, 130 * (e.hp/1200), 8))
+                screen.blit(fonts["small"].render(f"{e.name}: {int(e.hp)}HP", True, WHITE), (x_g, y_g + 12))
 
             if not p1.is_alive or all(not e.is_alive for e in enemies) or match_timer <= 0:
                 if winning_character == "":
@@ -754,20 +757,20 @@ async def run_game():
                     else:
                         winning_character = "TIMELINE EXPIRED OVERRIDE"
 
-                banner = pygame.Surface((WIDTH - center_view_x, 110)); banner.fill((5, 5, 10))
+                banner = pygame.Surface((WIDTH - center_view_x, 90)); banner.fill((5, 5, 10))
                 screen.blit(banner, (center_view_x, int(HEIGHT * 0.40)))
                 win_text = f"GAME WON BY {winning_character}"
-                screen.blit(fonts["title"].render(win_text.upper(), True, NEON_AMBER), (center_view_x + 40, int(HEIGHT * 0.45)))
+                screen.blit(fonts["title"].render(win_text.upper(), True, NEON_AMBER), (center_view_x + 30, int(HEIGHT * 0.45)))
 
         elif current_tab == "MYSTERY BOX":
-            screen.blit(fonts["title"].render("QUANTUM MATRIX CACHE", True, NEON_AMBER), (center_view_x + 40, int(HEIGHT*0.14)))
-            btn_box_rect = pygame.Rect(center_view_x + 100, int(HEIGHT*0.32), 140, 140)
+            screen.blit(fonts["title"].render("QUANTUM MATRIX CACHE", True, NEON_AMBER), (center_view_x + 30, int(HEIGHT*0.14)))
+            btn_box_rect = pygame.Rect(center_view_x + 80, int(HEIGHT*0.32), 120, 120)
             is_h = btn_box_rect.collidepoint(m_pos) and box_state != "ROLLING"
             pygame.draw.rect(screen, (45, 30, 15) if is_h else (24, 18, 42) if box_state=="ROLLING" else (14, 14, 28), btn_box_rect, border_radius=12)
             pygame.draw.rect(screen, NEON_AMBER, btn_box_rect, 2, border_radius=12)
-            screen.blit(fonts["title"].render("BOX", True, GOLD), (btn_box_rect.centerx - 16, btn_box_rect.centery - 20))
+            screen.blit(fonts["title"].render("BOX", True, GOLD), (btn_box_rect.centerx - 14, btn_box_rect.centery - 16))
 
-            strip = pygame.Rect(center_view_x + 40, int(HEIGHT * 0.60), WIDTH - center_view_x - 80, 65)
+            strip = pygame.Rect(center_view_x + 30, int(HEIGHT * 0.60), WIDTH - center_view_x - 60, 55)
             pygame.draw.rect(screen, (10,10,26), strip, border_radius=6)
             if box_state == "ROLLING": txt = box_rewards[current_roll_idx]["name"]; c = NEON_AMBER
             elif box_state == "CLAIMED": txt = f"UNLOCKED: {box_unlocked_reward['name']}"; c = NEON_GREEN
@@ -775,10 +778,24 @@ async def run_game():
             surf = fonts["main"].render(txt, True, c)
             screen.blit(surf, (strip.centerx - surf.get_width()//2, strip.centery - surf.get_height()//2))
 
+        # --- Dynamic Web Tab Focus Alert Layer ---
+        if not has_focus:
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+            
+            # Glowing focus notice layout box
+            msg_box = pygame.Rect(WIDTH//2 - 200, HEIGHT//2 - 35, 400, 70)
+            pygame.draw.rect(screen, PANEL_BG, msg_box, border_radius=6)
+            pygame.draw.rect(screen, NEON_CYAN, msg_box, 2, border_radius=6)
+            
+            txt1 = fonts["title"].render("⚠️ KEYBOARD INPUT LOCKED ⚠️", True, NEON_AMBER)
+            txt2 = fonts["small"].render("Click anywhere inside this grid window to active keys!", True, WHITE)
+            screen.blit(txt1, (msg_box.centerx - txt1.get_width()//2, msg_box.y + 14))
+            screen.blit(txt2, (msg_box.centerx - txt2.get_width()//2, msg_box.y + 42))
+
         pygame.display.flip()
         clock.tick(60)
-        
-        # This frame-level yield lets Emscripten update the canvas inside the HTML tab cleanly
         await asyncio.sleep(0)
 
     pygame.quit()
